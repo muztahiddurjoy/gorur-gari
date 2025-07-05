@@ -73,7 +73,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_B), updateEncoder, CHANGE);
   
-  Serial.println("Ready to receive commands (M<pwm>,S<angle>)");
   lastTime = millis();
 }
 
