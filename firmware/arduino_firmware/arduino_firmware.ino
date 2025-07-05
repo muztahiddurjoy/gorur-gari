@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Servo.h>  // Include Servo library
 
 // Encoder pins
 #define ENCODER_A 2
@@ -13,35 +14,28 @@
 #define US3_TRIG 8
 #define US3_ECHO 9
 
-#define US4_TRIG 10
-#define US4_ECHO 11
-
 #define MOTOR_LEFT 10
 #define MOTOR_RIGHT 11
+#define SERVO_PIN 12  // Servo pin
 
+#define BTN 13
 
+// Motor direction constants
+#define FORWARD 1
+#define BACKWARD -1
+#define STOP 0
 
+Servo myServo;  // Create servo object
 
-long d1,d2,d3,d4;
-int D1,D2,D3,D4;
-
-// Constants for JGA25-370 motor
-const float WHEEL_RADIUS = 0.0325;       // Wheel radius in meters (65mm diameter)
-const float COUNTS_PER_REV = 44.0;       // 11 PPR × 4 (quadrature decoding)
-const float METERS_PER_COUNT = (2 * PI * WHEEL_RADIUS) / COUNTS_PER_REV;
+long d1, d2, d3;
+int D1, D2, D3;
 
 // Odometry variables
 volatile long encoderCount = 0;
 long lastEncoderCount = 0;
-float distance = 0.0;            // Total distance traveled (meters)
-float x = 0.0;                   // X position in meters
-float y = 0.0;                   // Y position in meters
-float theta = 0.0;               // Orientation in radians
 double duration = 0.0;
+int btn_state = 0;
 
-// Motion variables
-float velocity = 0.0;            // Linear velocity (m/s)
-float rpm = 0.0;                 // Motor RPM
 unsigned long lastTime = 0;
 const int sampleTime = 100;      // Odometry update interval (ms)
 
@@ -58,22 +52,28 @@ void setup() {
   pinMode(US1_TRIG, OUTPUT); 
   pinMode(US1_ECHO, INPUT);
 
-  pinMode(US2_TRIG,OUTPUT);
-  pinMode(US2_ECHO,INPUT);
+  pinMode(US2_TRIG, OUTPUT);
+  pinMode(US2_ECHO, INPUT);
 
-  pinMode(US3_TRIG,OUTPUT);
-  pinMode(US3_ECHO,INPUT);
+  pinMode(US3_TRIG, OUTPUT);
+  pinMode(US3_ECHO, INPUT);
   
-  pinMode(US4_TRIG,OUTPUT);
-  pinMode(US4_ECHO,INPUT);
+  // Motor control pins
+  pinMode(MOTOR_LEFT, OUTPUT);
+  pinMode(MOTOR_RIGHT, OUTPUT);
 
-  pinMode(MOTOR_LEFT,OUTPUT);
-  pinMode(MOTOR_RIGHT,OUTPUT);
+  // Button pin
+  pinMode(BTN, INPUT_PULLUP);
+
+  // Attach servo
+  myServo.attach(SERVO_PIN);
+  myServo.write(90);  // Center position
+
   // Attach interrupts for encoder pulses
   attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_B), updateEncoder, CHANGE);
   
-  Serial.println("Time,Position,Velocity,RPM,Distance,X,Y,Theta");
+  Serial.println("Ready to receive commands (M<pwm>,S<angle>)");
   lastTime = millis();
 }
 
@@ -82,62 +82,57 @@ void loop() {
   unsigned long elapsedTime = currentTime - lastTime;
   
   printOdometryData(currentTime);
-  D1 = getUSReading(US1_TRIG,US1_ECHO);
-  D2 = getUSReading(US2_TRIG,US2_ECHO);
-  D3 = getUSReading(US3_TRIG,US3_ECHO);
-  D4 = getUSReading(US4_TRIG,US4_ECHO);
+  updateBtn();
+  
+  // Read ultrasonic sensors
+  D1 = getUSReading(US1_TRIG, US1_ECHO);
+  D2 = getUSReading(US2_TRIG, US2_ECHO);
+  D3 = getUSReading(US3_TRIG, US3_ECHO);
+  
   Serial.print(D1);
   Serial.print(",");
   Serial.print(D2);
   Serial.print(",");
-  Serial.println(D3);
-  // controlMotor(255);
-  
+  Serial.print(D3);
+  Serial.print(",");
+  Serial.println(btn_state);
+
+  // Process serial commands
+  processSerialCommands();
 
   if (elapsedTime >= sampleTime) {
-    // Calculate linear velocity (m/s)
-    long deltaCount = encoderCount - lastEncoderCount;
-    // velocity = (deltaCount * METERS_PER_COUNT) / (elapsedTime / 1000.0);
-    
-    // Calculate RPM
-    rpm = (deltaCount * 60000.0) / (COUNTS_PER_REV * elapsedTime);
-    
-    // Update total distance
-    distance += deltaCount * METERS_PER_COUNT;
-    
-    // Update position (simple linear motion - replace with your kinematic model)
-    updatePosition(deltaCount * METERS_PER_COUNT);
-    
-    // Update last values
     lastEncoderCount = encoderCount;
     lastTime = currentTime;
-    
   }
-  
-  // Serial.print(",");
-  // Serial.println(D4);
-  
-  
 }
 
-// Update robot position (simplified for single wheel)
-void updatePosition(float deltaDistance) {
-  // For a differential drive robot, you would use both wheel distances
-  // This is a simplified model for demonstration with one wheel
-  x += deltaDistance * cos(theta);
-  y += deltaDistance * sin(theta);
-  
-  // For a real robot, you would update theta based on wheel differences
-  // theta += (deltaRight - deltaLeft) / WHEEL_BASE;
+void processSerialCommands() {
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    
+    // Motor command: M<pwm_value> (e.g., M150 or M-100)
+    if (command == 'M') {
+      int pwm = Serial.parseInt();
+      controlMotor(pwm);
+    }
+    // Servo command: S<angle> (e.g., S90)
+    else if (command == 'S') {
+      int angle = Serial.parseInt();
+      angle = constrain(angle, 0, 180);  // Limit to servo range
+      myServo.write(angle);
+    }
+    
+    // Clear any remaining characters in buffer
+    while (Serial.available() > 0) {
+      Serial.read();
+    }
+  }
 }
 
 // Print all odometry data
 void printOdometryData(unsigned long time) {
   Serial.print(encoderCount);
   Serial.print(",");
-  // Serial.print(velocity);    // 3 decimal places
-  // Serial.print(",");
- 
 }
 
 // Interrupt service routine for encoder
@@ -151,8 +146,8 @@ void updateEncoder() {
   encoderCount += lookup_table[enc_val & 0b1111];
 }
 
-int getUSReading(int trig, int echo){
-// Clears the trigPin
+int getUSReading(int trig, int echo) {
+  // Clears the trigPin
   digitalWrite(trig, LOW);
   delayMicroseconds(2);
   // Sets the trigPin on HIGH state for 10 micro seconds
@@ -165,16 +160,24 @@ int getUSReading(int trig, int echo){
   return duration * 0.034 / 2;
 }
 
+void updateBtn() {
+  btn_state = digitalRead(BTN);
+}
 
-void controlMotor(int pwm_value){
-  if(pwm_value>0){
-    
-    analogWrite(MOTOR_LEFT,0);
-    analogWrite(MOTOR_RIGHT,pwm_value);
-  }
-  else if(pwm_value<0){
-    analogWrite(MOTOR_LEFT,pwm_value);
-    analogWrite(MOTOR_RIGHT,0);
-  }
+void controlMotor(int pwm_value) {
+  // Constrain PWM value to valid range (-255 to 255)
+  pwm_value = constrain(pwm_value, -255, 255);
   
+  if (pwm_value > 0) {    // Forward
+    analogWrite(MOTOR_LEFT, 0);
+    analogWrite(MOTOR_RIGHT, pwm_value);
+  } 
+  else if (pwm_value < 0) {  // Backward
+    analogWrite(MOTOR_LEFT, abs(pwm_value));
+    analogWrite(MOTOR_RIGHT, 0);
+  }
+  else {  // Stop
+    analogWrite(MOTOR_LEFT, 0);
+    analogWrite(MOTOR_RIGHT, 0);
+  }
 }
