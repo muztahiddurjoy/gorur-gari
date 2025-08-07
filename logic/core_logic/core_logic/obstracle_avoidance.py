@@ -6,12 +6,9 @@ from sensor_msgs.msg import LaserScan
 import math
 
 class FrontDistanceDetector(Node):
-    front_distance = None
-    front_left_distance = None
-    front_right_distance = None
-    back_distance = None
-    back_left_distance = None
-    back_right_distance = None
+    zones= list(range(12))
+    # 0 and 11 index for front distance
+    # 1 and 2 index for left and right distance
 
     def __init__(self):
         super().__init__('front_distance_detector')
@@ -39,17 +36,36 @@ class FrontDistanceDetector(Node):
         Callback function for LaserScan messages.
         Finds the distance measurement closest to 0 degrees (front).
         """
-        front_distance = None
+        self.zones = [
+            self.handle_zone_distance(msg.ranges, 660, 780),
+            self.handle_zone_distance(msg.ranges, 600, 660),
+            self.handle_zone_distance(msg.ranges, 540, 600),
+            self.handle_zone_distance(msg.ranges, 480, 540),
+            self.handle_zone_distance(msg.ranges, 420, 480),
+            self.handle_zone_distance(msg.ranges, 360, 420),
+            self.handle_zone_distance(msg.ranges, 300, 360),
+            self.handle_zone_distance(msg.ranges, 240, 300),
+            self.handle_zone_distance(msg.ranges, 180, 240),
+            self.handle_zone_distance(msg.ranges, 120, 180),
+            self.handle_zone_distance(msg.ranges, 60, 120),
+            self.handle_zone_distance(msg.ranges, 0, 60)]
         closest_angle_diff = float('inf')
         
         current_angle = msg.angle_min
         # first_distance = msg.ranges[720-60] if msg.ranges else None
-        self.handle_front(msg.ranges)
-        self.handle_front_left(msg.ranges)
-        self.handle_front_right(msg.ranges)
-        self.handle_back(msg.ranges)
-        self.handle_back_left(msg.ranges)
-        self.handle_back_right(msg.ranges)
+        self.zones[0] = self.handle_zone_distance(msg.ranges, 0, 60)
+        self.zones[1] = self.handle_zone_distance(msg.ranges, 60, 120)
+        self.zones[2] = self.handle_zone_distance(msg.ranges, 120, 180)
+        self.zones[3] = self.handle_zone_distance(msg.ranges, 180, 240)
+        self.zones[4] = self.handle_zone_distance(msg.ranges, 240, 300)
+        self.zones[5] = self.handle_zone_distance(msg.ranges, 300, 360)
+        self.zones[6] = self.handle_zone_distance(msg.ranges, 360, 420)
+        self.zones[7] = self.handle_zone_distance(msg.ranges, 420, 480)
+        self.zones[8] = self.handle_zone_distance(msg.ranges, 480, 540)
+        self.zones[9] = self.handle_zone_distance(msg.ranges, 540, 600)
+        self.zones[10] = self.handle_zone_distance(msg.ranges, 600, 660)
+        self.zones[11] = self.handle_zone_distance(msg.ranges, 660, 720)
+        
         self.print_distances()
         # if first_distance is not None:
         #     if(first_distance < 0.2):
@@ -88,82 +104,26 @@ class FrontDistanceDetector(Node):
         return angle
 
     #Handle for all regions
-    def handle_front(self,ranges):
+    def handle_zone_distance(self,ranges,start,end):
         avg_distance = 0.0
         valid_count = 0
-        for i in range(660,780):
+        for i in range(start, end):
             if i > 719:
                 i -= 720
             if ranges[i] not in (float('inf'), float('nan')):
                 avg_distance += ranges[i]
                 valid_count += 1
         avg_distance /= float(valid_count)
-        self.front_distance = avg_distance
-    
-    def handle_front_left(self, ranges):
-        avg_distance = 0.0
-        valid_count = 0
-        for i in range(60, 180):
-            if ranges[i] not in (float('inf'), float('nan')):
-                avg_distance += ranges[i]
-                valid_count += 1
-        if valid_count > 0:
-            avg_distance /= float(valid_count)
-            self.front_left_distance = avg_distance
-
-    def handle_front_right(self, ranges):
-        avg_distance = 0.0
-        valid_count = 0
-        for i in range(540, 660):
-            if ranges[i] not in (float('inf'), float('nan')):
-                avg_distance += ranges[i]
-                valid_count += 1
-        if valid_count > 0:
-            avg_distance /= float(valid_count)
-            self.front_right_distance = avg_distance
-    
-    def handle_back_left(self, ranges):
-        avg_distance = 0.0
-        valid_count = 0
-        for i in range(180, 300):
-            if ranges[i] not in (float('inf'), float('nan')):
-                avg_distance += ranges[i]
-                valid_count += 1
-        if valid_count > 0:
-            avg_distance /= float(valid_count)
-            self.back_left_distance = avg_distance
-    
-    def handle_back(self, ranges):
-        avg_distance = 0.0
-        valid_count = 0
-        for i in range(300, 420):
-            if ranges[i] not in (float('inf'), float('nan')):
-                avg_distance += ranges[i]
-                valid_count += 1
-        if valid_count > 0:
-            avg_distance /= float(valid_count)
-            self.back_right_distance = avg_distance
-    
-    def handle_back_right(self, ranges):
-        avg_distance = 0.0
-        valid_count = 0
-        for i in range(420, 540):
-            if ranges[i] not in (float('inf'), float('nan')):
-                avg_distance += ranges[i]
-                valid_count += 1
-        if valid_count > 0:
-            avg_distance /= float(valid_count)
-            self.back_distance = avg_distance
+        return avg_distance if valid_count > 0 else float('inf')
     
     def print_distances(self):
-        self.get_logger().info(
-            f"Front: {self.front_distance:.2f}m, "
-            f"Front Left: {self.front_left_distance:.2f}m, "
-            f"Front Right: {self.front_right_distance:.2f}m, "
-            f"Back: {self.back_distance:.2f}m, "
-            f"Back Left: {self.back_left_distance:.2f}m, "
-            f"Back Right: {self.back_right_distance:.2f}m"
-        )
+        max_dis_index = 0
+        for i in range(len(self.zones)):
+            if self.zones[i] > self.zones[max_dis_index]:
+                max_dis_index = i
+        self.get_logger().info(f"Move to {(max_dis_index+1)*30} degree with index {max_dis_index} and distance {self.zones[max_dis_index]:.2f}m")
+
+        
 
     
 def main(args=None):
