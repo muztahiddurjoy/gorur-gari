@@ -1,1 +1,4 @@
 /logic/venv
+/logic/core_logic/build
+/logic/core_logic/install
+/logic/core_logic/log
