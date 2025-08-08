@@ -66,7 +66,6 @@ class FrontDistanceDetector(Node):
         self.zones[10] = self.handle_zone_distance(msg.ranges, 600, 660)
         self.zones[11] = self.handle_zone_distance(msg.ranges, 660, 720)
         
-        self.print_distances()
         # if first_distance is not None:
         #     if(first_distance < 0.2):
         #         self.get_logger().warn("Stop car")
@@ -116,12 +115,20 @@ class FrontDistanceDetector(Node):
         avg_distance /= float(valid_count)
         return avg_distance if valid_count > 0 else float('inf')
     
-    def print_distances(self):
+    # def print_distances(self):
+    #     max_dis_index = 0
+    #     for i in range(len(self.zones)):
+    #         if self.zones[i] > self.zones[max_dis_index]:
+    #             max_dis_index = i
+    #     if(self.zones[0]<0.4):
+    #         if(self.zones[1]>)
+    #     else:
+    #         print("Go forward")
+    #     self.get_logger().info(f"Move to {((max_dis_index+1)*30)-30} degree with index {max_dis_index} and distance {self.zones[max_dis_index]:.2f}m")
+    
+    def linear_movement_handler(self):
         max_dis_index = 0
-        for i in range(len(self.zones)):
-            if self.zones[i] > self.zones[max_dis_index]:
-                max_dis_index = i
-        self.get_logger().info(f"Move to {(max_dis_index+1)*30} degree with index {max_dis_index} and distance {self.zones[max_dis_index]:.2f}m")
+        
 
         
 
