@@ -8,7 +8,7 @@ void btnLoop() {
     int reading = digitalRead(activeButton);
     if (reading != buttonState) {
         buttonState = reading;
-        tft.drawString("Button " + String(buttonState), 10, 10, 2);
+        tft.drawString("Button "+String(buttonState), 10, 10, 2);
     }
 }
 void btnSetup(int pin) {
