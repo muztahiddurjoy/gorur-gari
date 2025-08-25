@@ -3,12 +3,19 @@
 
 #include <Arduino.h>
 
-void serialSetup(int baudRate = 115200);
-String incomingSerialData();
-void sendSerialData(const String &data);
-void sendSerialData(const char *data);
-void serialLoop();
+struct SerialCommand {
+    float velocity;
+    float steering_angle;
+};
 
+struct SerialData {
+    long encoder_count;
+    int button_state;
+};
+
+void serialSetup(void);
+bool getSerialCommand(SerialCommand &cmd);
+void sendSerialData(const SerialData &data);
+void sendRawData(const String &data);
 
 #endif // SERIAL_HANDLER_H
-

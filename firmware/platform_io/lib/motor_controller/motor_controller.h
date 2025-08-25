@@ -2,7 +2,7 @@
 #define MOTOR_CONTROLLER_H
 
 #include <Arduino.h>
-#include <Servo.h>  
+#include <ESP32Servo.h>  // Use ESP32-specific Servo library
 
 // Pin definitions
 #define ENCODER_A 2

@@ -1,4 +1,5 @@
 #include "motor_controller.h"
+#include <Arduino.h>
 
 // Initialize static members
 volatile long MotorController::encoderCountStatic = 0;
@@ -7,14 +8,19 @@ const int8_t MotorController::lookup_table[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0,
 // Global instance
 MotorController motorController;
 
+// Static variables for ISR
+static volatile uint8_t enc_val = 0;
+static volatile uint8_t last_enc_state = 0;
+
 MotorController::MotorController() {
     // Initialize odometry data
-    odometry.encoderCount = 0;
     odometry.lastEncoderCount = 0;
     odometry.lastTime = 0;
 }
 
 void MotorController::begin() {
+    Serial.println("Initializing motor controller...");
+    
     // Set encoder pins as inputs
     pinMode(ENCODER_A, INPUT_PULLUP);
     pinMode(ENCODER_B, INPUT_PULLUP);
@@ -23,15 +29,23 @@ void MotorController::begin() {
     pinMode(MOTOR_LEFT, OUTPUT);
     pinMode(MOTOR_RIGHT, OUTPUT);
     
-    // Attach servo
-    myServo.attach(SERVO_PIN);
-    myServo.write(90);  // Center position
+    // Initialize motors to stop
+    digitalWrite(MOTOR_LEFT, LOW);
+    digitalWrite(MOTOR_RIGHT, LOW);
     
-    // Attach interrupts for encoder pulses
+    // Attach servo (if needed)
+    // myServo.attach(SERVO_PIN);
+    // myServo.write(90);  // Center position
+    
+    // Read initial encoder state
+    last_enc_state = (digitalRead(ENCODER_B) << 1) | digitalRead(ENCODER_A);
+    
+    // Attach interrupts for encoder pulses - FALLING edge is safer
     attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoderISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENCODER_B), updateEncoderISR, CHANGE);
     
     odometry.lastTime = millis();
+    Serial.println("Motor controller initialized");
 }
 
 void MotorController::update() {
@@ -39,16 +53,20 @@ void MotorController::update() {
     unsigned long elapsedTime = currentTime - odometry.lastTime;
     
     if (elapsedTime >= odometry.sampleTime) {
-        odometry.lastEncoderCount = odometry.encoderCount;
+        odometry.lastEncoderCount = encoderCountStatic;
         odometry.lastTime = currentTime;
     }
 }
 
-// Interrupt service routine for encoder
-void MotorController::updateEncoderISR() {
-    static uint8_t enc_val = 0;
-    // Shift previous state and add new state
-    enc_val = (enc_val << 2) | (digitalRead(ENCODER_B) << 1) | digitalRead(ENCODER_A);
+// Optimized ISR - NO digitalRead calls!
+void IRAM_ATTR MotorController::updateEncoderISR() {
+    // Read pins directly from GPIO register (much faster)
+    uint8_t enc_a = (GPIO.in >> ENCODER_A) & 0x1;
+    uint8_t enc_b = (GPIO.in >> ENCODER_B) & 0x1;
+    uint8_t current_state = (enc_b << 1) | enc_a;
+    
+    // Update encoder state
+    enc_val = (enc_val << 2) | current_state;
     
     // Update encoder count using the lookup table
     encoderCountStatic += lookup_table[enc_val & 0b1111];
@@ -100,8 +118,9 @@ long MotorController::getEncoderCount() {
 }
 
 long MotorController::getEncoderDelta() {
-    long delta = encoderCountStatic - odometry.lastEncoderCount;
-    odometry.lastEncoderCount = encoderCountStatic;
+    long current_count = encoderCountStatic;
+    long delta = current_count - odometry.lastEncoderCount;
+    odometry.lastEncoderCount = current_count;
     return delta;
 }
 
