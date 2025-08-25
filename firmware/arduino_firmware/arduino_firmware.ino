@@ -137,7 +137,6 @@ void printOdometryData(unsigned long time) {
 // Interrupt service routine for encoder
 void updateEncoder() {
   static uint8_t enc_val = 0;
-  
   // Shift previous state and add new state
   enc_val = (enc_val << 2) | (digitalRead(ENCODER_B) << 1) | digitalRead(ENCODER_A);
   
