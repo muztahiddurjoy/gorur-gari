@@ -11,6 +11,8 @@
 float currentVelocity = 0;
 float currentSteering = 0;
 unsigned long lastLoopTime = 0;
+unsigned long lastTftUpdate = 0;
+const unsigned long TFT_UPDATE_INTERVAL = 200; // Update TFT every 200ms
 
 void setup() {
     // Initialize serial for debugging
@@ -18,18 +20,25 @@ void setup() {
     delay(1000); // Wait for serial to stabilize
     Serial.println("System starting...");
     
-    // Initialize components with error checking
-    Serial.println("Initializing TFT...");
+    // Initialize TFT FIRST - show startup status immediately
     tftSetup();
+    Serial.println("TFT initialized");
     
-    Serial.println("Initializing buttons...");
+    // Initialize buttons (will work even if not physically connected)
     buttonHandler.begin(BUTTON_1, BUTTON_2);
+    Serial.println("Buttons initialized");
     
-    Serial.println("Initializing motor controller...");
+    // Initialize motor controller (will work in simulation mode if not connected)
     motorController.begin();
+    Serial.println("Motor controller initialized");
     
-    Serial.println("Initializing serial handler...");
+    // Initialize serial handler
     serialSetup();
+    Serial.println("Serial handler initialized");
+    
+    // Show system ready message on TFT
+    tftShowMessage("System Ready!", TFT_GREEN);
+    delay(2000); // Show for 2 seconds
     
     Serial.println("System ready - starting main loop");
     lastLoopTime = millis();
@@ -38,41 +47,54 @@ void setup() {
 void loop() {
     unsigned long currentTime = millis();
     
-    // Feed the watchdog regularly
+    // Feed the watchdog regularly and show heartbeat
     if (currentTime - lastLoopTime > 1000) {
         Serial.println("Loop running...");
         lastLoopTime = currentTime;
     }
     
-    // Update button states
+    // Always update button states (even if no buttons connected)
     buttonHandler.update();
+    int buttonState = buttonHandler.getButtonState();
     
-    // Process incoming commands
+    // Always read encoder (even if no encoder connected - will return 0 or simulated data)
+    long encoderCount = motorController.getEncoderCount();
+    
+    // Process incoming commands (will work even if no motors connected)
     SerialCommand cmd;
-    if (getSerialCommand(cmd)) {
+    bool newCommand = getSerialCommand(cmd);
+    if (newCommand) {
         Serial.printf("Command: Vel=%.2f, Angle=%.1f\n", cmd.velocity, cmd.steering_angle);
         
         currentVelocity = cmd.velocity;
         currentSteering = cmd.steering_angle;
         
-        // Apply velocity command
+        // Apply velocity command (motor controller will handle no-connection gracefully)
         int motorSpeed = constrain(cmd.velocity * 255, -255, 255);
         motorController.controlMotor(motorSpeed);
     }
     
-    // Send serial data
+    // Always send serial data (for monitoring)
     SerialData data;
-    data.button_state = buttonHandler.getButtonState();
-    data.encoder_count = motorController.getEncoderCount();
+    data.button_state = buttonState;
+    data.encoder_count = encoderCount;
     sendSerialData(data);
     
-    // Update TFT with current values
-    tftUpdate(
-        data.encoder_count,
-        data.button_state,
-        currentVelocity,
-        currentSteering
-    );
+    // ALWAYS update TFT regardless of motor/servo connection status
+    if (currentTime - lastTftUpdate >= TFT_UPDATE_INTERVAL) {
+        tftUpdate(
+            encoderCount,
+            buttonState,
+            currentVelocity,
+            currentSteering
+        );
+        
+        // Optional: Debug output
+        Serial.printf("TFT: Enc=%ld, Btn=%d, Vel=%.2f, Ang=%.1f\n", 
+                     encoderCount, buttonState, currentVelocity, currentSteering);
+        
+        lastTftUpdate = currentTime;
+    }
     
     // CRITICAL: Add delay to prevent watchdog reset
     delay(10);

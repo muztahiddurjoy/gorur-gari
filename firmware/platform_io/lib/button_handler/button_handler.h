@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-// Remove the extern declaration since we'll handle it differently
-// extern int buttonState;
 
 class ButtonHandler {
 private:
