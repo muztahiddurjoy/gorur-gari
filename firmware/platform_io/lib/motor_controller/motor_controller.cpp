@@ -26,8 +26,8 @@ void MotorController::begin() {
     pinMode(ENCODER_B, INPUT_PULLUP);
     
     // Motor control pins
-    pinMode(MOTOR_LEFT, OUTPUT);
-    pinMode(MOTOR_RIGHT, OUTPUT);
+    // pinMode(MOTOR_LEFT, OUTPUT);
+    // pinMode(MOTOR_RIGHT, OUTPUT);
     
     // Initialize motors to stop
     digitalWrite(MOTOR_LEFT, LOW);

@@ -2,24 +2,41 @@
 #define MOTOR_CONTROLLER_H
 
 #include <Arduino.h>
+#include <ESP32Servo.h>  // Use ESP32-specific Servo library
 
 // Pin definitions
 #define ENCODER_A 2
-#define ENCODER_B 3
-#define MOTOR_LEFT 10
+#define ENCODER_B 15
+#define MOTOR_LEFT 13
 #define MOTOR_RIGHT 11
-#define SERVO_PIN 12
+#define SERVO_PIN 32
 
+// Motor direction constants
+#define FORWARD 1
+#define BACKWARD -1
+#define STOP 0
+
+// Odometry structure
+struct OdometryData {
+    volatile long encoderCount;
+    long lastEncoderCount;
+    unsigned long lastTime;
+    const int sampleTime = 100; // ms
+};
+
+// Motor Controller class
 class MotorController {
 private:
-    long encoderCount;
-    uint8_t lastEncoderState;
-    unsigned long lastUpdateTime;
-
+    Servo myServo;
+    OdometryData odometry;
+    
+    // Encoder interrupt handler (needs to be static for ISR)
+    static void updateEncoderISR();
+    
 public:
     MotorController();
     void begin();
-    void update(); // Call this regularly to update encoder
+    void update();
     
     // Motor control
     void controlMotor(int pwm_value);
@@ -27,13 +44,20 @@ public:
     void moveForward(int speed);
     void moveBackward(int speed);
     
-    // Servo control (optional)
+    // Servo control
     void setServoAngle(int angle);
+    int getServoAngle();
     
-    // Encoder
+    // Odometry
     long getEncoderCount();
+    long getEncoderDelta();
+    float getDistanceTraveled(float wheelCircumference, int pulsesPerRevolution);
+    
+    // Static members for ISR access
+    static volatile long encoderCountStatic;
+    static const int8_t lookup_table[];
 };
 
-extern MotorController motorController;
+extern MotorController motorController; // Global instance
 
 #endif // MOTOR_CONTROLLER_H

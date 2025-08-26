@@ -10,7 +10,7 @@ void tftSetup() {
     tft.setRotation(1); // Try 0, 1, 2, 3 if display orientation is wrong
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setTextSize(2);
+    tft.setTextSize(1);
     tft.setTextFont(2);
     
     // Show startup message
