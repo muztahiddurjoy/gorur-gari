@@ -17,7 +17,6 @@ void serialLoop(void) {
 bool getSerialCommand(SerialCommand &cmd) {
     if (Serial.available() > 0) {
         char c = Serial.read();
-        
         if (c == '\n' || c == '\r') {
             if (rxBuffer.length() > 0) {
                 int commaIndex = rxBuffer.indexOf(',');

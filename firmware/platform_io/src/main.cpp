@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <SPI.h>
 #include "serial_handler.h"
 #include "button_handler.h"
 #include "motor_controller.h"
@@ -18,29 +19,23 @@ void setup() {
     // Initialize serial for debugging
     Serial.begin(115200);
     delay(1000); // Wait for serial to stabilize
-    Serial.println("System starting...");
     
     // Initialize TFT FIRST - show startup status immediately
     tftSetup();
-    Serial.println("TFT initialized");
     
     // Initialize buttons (will work even if not physically connected)
     buttonHandler.begin(BUTTON_1, BUTTON_2);
-    Serial.println("Buttons initialized");
     
     // Initialize motor controller (will work in simulation mode if not connected)
     motorController.begin();
-    Serial.println("Motor controller initialized");
     
     // Initialize serial handler
     serialSetup();
-    Serial.println("Serial handler initialized");
     
     // Show system ready message on TFT
     tftShowMessage("System Ready!", TFT_GREEN);
     delay(2000); // Show for 2 seconds
     
-    Serial.println("System ready - starting main loop");
     lastLoopTime = millis();
 }
 
@@ -49,7 +44,7 @@ void loop() {
     
     // Feed the watchdog regularly and show heartbeat
     if (currentTime - lastLoopTime > 1000) {
-        Serial.println("Loop running...");
+        
         lastLoopTime = currentTime;
     }
     
@@ -70,7 +65,8 @@ void loop() {
         currentSteering = cmd.steering_angle;
         
         // Apply velocity command (motor controller will handle no-connection gracefully)
-        int motorSpeed = constrain(cmd.velocity * 255, -255, 255);
+        int mapped_pwm = map(cmd.velocity, -100, 100, -255, 255);
+        int motorSpeed = constrain(mapped_pwm, -255, 255);
         motorController.controlMotor(motorSpeed);
     }
     
@@ -78,7 +74,7 @@ void loop() {
     SerialData data;
     data.button_state = buttonState;
     data.encoder_count = encoderCount;
-    sendSerialData(data);
+    // sendSerialData(data);
     
     // ALWAYS update TFT regardless of motor/servo connection status
     if (currentTime - lastTftUpdate >= TFT_UPDATE_INTERVAL) {

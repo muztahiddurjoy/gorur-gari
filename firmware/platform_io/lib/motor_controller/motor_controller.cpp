@@ -74,6 +74,7 @@ void IRAM_ATTR MotorController::updateEncoderISR() {
 
 void MotorController::controlMotor(int pwm_value) {
     // Constrain PWM value to valid range (-255 to 255)
+    Serial.println("Control motor with PWM: " + String(pwm_value));
     pwm_value = constrain(pwm_value, -255, 255);
     
     if (pwm_value > 0) {    // Forward

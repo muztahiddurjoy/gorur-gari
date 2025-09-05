@@ -8,7 +8,7 @@
 #define ENCODER_A 2
 #define ENCODER_B 15
 #define MOTOR_LEFT 13
-#define MOTOR_RIGHT 11
+#define MOTOR_RIGHT 12
 #define SERVO_PIN 32
 
 // Motor direction constants
