@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <SPI.h>
 #include "serial_handler.h"
 #include "button_handler.h"
 #include "motor_controller.h"
