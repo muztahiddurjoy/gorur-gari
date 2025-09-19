@@ -1,4 +1,5 @@
 #include "button_handler.h"
+#include "tft_handler.h"
 
 ButtonHandler buttonHandler;
 

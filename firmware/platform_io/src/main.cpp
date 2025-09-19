@@ -50,6 +50,9 @@ void loop() {
     // Always update button states (even if no buttons connected)
     buttonHandler.update();
     int buttonState = buttonHandler.getButtonState();
+    if(buttonState != 0) {
+        tftSetTimeStamp(currentTime);
+    }
     
     // Always read encoder (even if no encoder connected - will return 0 or simulated data)
     long encoderCount = motorController.getEncoderCount();

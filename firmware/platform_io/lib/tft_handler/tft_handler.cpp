@@ -3,7 +3,8 @@
 
 TFT_eSPI tft = TFT_eSPI();
 unsigned long lastTftRefresh = 0;
-const unsigned long TFT_REFRESH_INTERVAL = 100; // Refresh every 100ms
+const unsigned long TFT_REFRESH_INTERVAL = 30; // Refresh every 30ms
+unsigned long timeStamp = 0;
 
 void tftSetup() {
     tft.init();
@@ -15,7 +16,7 @@ void tftSetup() {
     
     // Show startup message
     tftShowMessage("System Starting...", TFT_GREEN);
-    delay(2000);
+    delay(1000);
     tftClear();
 }
 
@@ -60,10 +61,14 @@ void tftUpdate(long encoder_count, int button_state, float velocity, float steer
         // Show uptime
         tft.setTextColor(TFT_GREEN, TFT_BLACK);
         tft.setCursor(5, 110);
-        tft.printf("Uptime: %ds", millis() / 1000);
+        tft.printf("Uptime: %ds", timeStamp>0? (millis()-timeStamp)/ 1000:0);
         
         lastTftRefresh = currentTime;
     }
+}
+
+void tftSetTimeStamp(unsigned long time) {
+    timeStamp = time;
 }
 
 void tftShowMessage(const String &message, uint16_t color) {
