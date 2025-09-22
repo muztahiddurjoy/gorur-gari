@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'obstacle_avoidance = core_logic.obstracle_avoidance:main',
+            'serial_control= core_logic.serial_control:main',
         ],
     },
 )

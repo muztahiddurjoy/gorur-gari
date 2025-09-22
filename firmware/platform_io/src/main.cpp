@@ -10,7 +10,8 @@ MotorController motor(13, 12);  // Only motor pins, no servo pin
 SerialHandler serialHandler(115200);
 ButtonHandler button(0); // GPIO 0 for the button
 
-int temp_count = 0;
+int last_vel = 0;
+int last_angle = 0;
 
 void setup() {
     serialHandler.begin();
@@ -23,15 +24,32 @@ void setup() {
 void loop() {
     encoder.updateOdometry();
     serialHandler.readLine();
-    int buttonState = button.isPressed()?1:0;
-    serialHandler.log(String(encoder.getCount())+","+String(encoder.getVelocity())+","+String(buttonState));
-    serialHandler.log("Servo angle: " + String(servo.getAngle()));
+    int buttonState = button.isPressed() ? 1 : 0;
+
+    // Log encoder + button state
+    serialHandler.log(
+        String(encoder.getCount()) + "," +
+        String(encoder.getVelocity()) + "," +
+        String(buttonState)
+    );
+
+    // Get latest commands
     int angle = serialHandler.getAngle();
     int velocity = serialHandler.getVelocity();
-    servo.setAngle(angle);
-    if(velocity < 0) {
-        motor.moveBackward(-velocity);
+
+    // Update stored values if new commands are received
+    if (angle != last_angle) {
+        last_angle = angle;
+    }
+    if (velocity != last_vel) {
+        last_vel = velocity;
+    }
+
+    // Always apply the last commanded values
+    servo.setAngle(last_angle);
+    if (last_vel < 0) {
+        motor.moveBackward(-last_vel);
     } else {
-        motor.moveForward(velocity);
+        motor.moveForward(last_vel);
     }
 }
