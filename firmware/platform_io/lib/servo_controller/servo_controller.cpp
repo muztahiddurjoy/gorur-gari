@@ -4,8 +4,10 @@ ServoController::ServoController(int pin) : _pin(pin), _currentAngle(0) {}
 
 void ServoController::begin() {
     // Remove analogWrite line - not needed for servo
-    _servo.attach(_pin);
-    _servo.write(_currentAngle);
+     ESP32PWM::allocateTimer(0);
+     _servo.setPeriodHertz(50);    // Standard 50hz servo
+     _servo.attach(_pin, 1000, 2000);
+     _servo.write(0);
 }
 
 void ServoController::setAngle(int angle) {
