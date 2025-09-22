@@ -9,8 +9,8 @@ class SerialHandler {
         void begin();
         void log(const String &message);
         String readLine();
-        int getVelocity();
-        int getAngle();
+        int getVelocity(String rawString);
+        int getAngle(String rawString);
     private:
         unsigned long _baudRate;
         String _message="";

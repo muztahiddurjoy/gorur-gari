@@ -22,9 +22,11 @@ void setup() {
 }
 
 void loop() {
+    String command = serialHandler.readLine();
     encoder.updateOdometry();
-    serialHandler.readLine();
+    button.update();
     int buttonState = button.isPressed() ? 1 : 0;
+    
 
     // Log encoder + button state
     serialHandler.log(
@@ -34,8 +36,10 @@ void loop() {
     );
 
     // Get latest commands
-    int angle = serialHandler.getAngle();
-    int velocity = serialHandler.getVelocity();
+    if(command!=""){
+        
+    int angle = serialHandler.getAngle(command);
+    int velocity = serialHandler.getVelocity(command);
 
     // Update stored values if new commands are received
     if (angle != last_angle) {
@@ -52,4 +56,5 @@ void loop() {
     } else {
         motor.moveForward(last_vel);
     }
+}
 }

@@ -25,19 +25,18 @@ String SerialHandler::readLine() {
     return line;
 }
 
-int SerialHandler::getVelocity() {
-    if(_message==""){
+int SerialHandler::getVelocity(String rawString) {
+    if(rawString==""){
         return 0;
     }
-    Serial.println("Message: " + _message); // Debug print
-    int velocity = _message.substring(0,_message.indexOf(",")).toInt();
+    int velocity = rawString.substring(0,rawString.indexOf(",")).toInt();
     return velocity;
 }
 
-int SerialHandler::getAngle() {
-    if(_message==""){
+int SerialHandler::getAngle(String rawString) {
+    if(rawString==""){
         return 0;
     }
-    int angle = _message.substring(_message.indexOf(",")+1).toInt();
+    int angle = rawString.substring(rawString.indexOf(",")+1).toInt();
     return angle;
 }
