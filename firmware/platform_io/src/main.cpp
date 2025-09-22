@@ -1,45 +1,37 @@
 #include "servo_controller.h"
 #include "encoder_controller.h"
 #include "motor_controller.h"
+#include "serial_handler.h"
+#include "button_handler.h"
 
 ServoController servo(18);
 EncoderController encoder(34, 35);
 MotorController motor(13, 12);  // Only motor pins, no servo pin
+SerialHandler serialHandler(115200);
+ButtonHandler button(0); // GPIO 0 for the button
 
 int temp_count = 0;
-bool dhon = false;;
 
 void setup() {
-    Serial.begin(115200);
-    motor.begin();   // No servo conflicts
+    serialHandler.begin();
+    button.begin();
+    motor.begin();  // No servo conflicts
     encoder.begin();
     servo.begin();   // Your servo controller uses timer 0
 }
 
 void loop() {
     encoder.updateOdometry();
-    
-    Serial.print("Encoder Count: ");
-    Serial.print(encoder.getCount());
-    Serial.print(" | Velocity: ");
-    Serial.print(encoder.getVelocity());
-    Serial.println(" counts/sec");
-    
-    // Your servo control logic
-    if(servo.getAngle() < 180) {
-        servo.setAngle(servo.getAngle() + 1);
+    serialHandler.readLine();
+    int buttonState = button.isPressed()?1:0;
+    serialHandler.log(String(encoder.getCount())+","+String(encoder.getVelocity())+","+String(buttonState));
+    serialHandler.log("Servo angle: " + String(servo.getAngle()));
+    int angle = serialHandler.getAngle();
+    int velocity = serialHandler.getVelocity();
+    servo.setAngle(angle);
+    if(velocity < 0) {
+        motor.moveBackward(-velocity);
+    } else {
+        motor.moveForward(velocity);
     }
-    else {
-        servo.setAngle(0);
-    }
-    
-    // Motor control
-    motor.moveForward(100);  // Changed from 0 to actually move
-    
-    if(temp_count++ > 200) {
-        motor.stopMotor();
-        temp_count = 0;
-    }
-    
-    delay(20);
 }

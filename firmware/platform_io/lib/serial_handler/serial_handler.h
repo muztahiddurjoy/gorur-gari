@@ -3,19 +3,16 @@
 
 #include <Arduino.h>
 
-struct SerialCommand {
-    float velocity;
-    float steering_angle;
+class SerialHandler {
+    public:
+        SerialHandler(unsigned long baudRate);
+        void begin();
+        void log(const String &message);
+        String readLine();
+        int getVelocity();
+        int getAngle();
+    private:
+        unsigned long _baudRate;
+        String _message="";
 };
-
-struct SerialData {
-    long encoder_count;
-    int button_state;
-};
-
-void serialSetup(void);
-bool getSerialCommand(SerialCommand &cmd);
-void sendSerialData(const SerialData &data);
-void sendRawData(const String &data);
-
 #endif // SERIAL_HANDLER_H
