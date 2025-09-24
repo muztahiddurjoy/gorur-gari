@@ -3,30 +3,27 @@
 
 #include <Arduino.h>
 
-
 class ButtonHandler {
-private:
-    int button1Pin;
-    int button2Pin;
-    bool button1State;
-    bool button2State;
-    bool button1PrevState;
-    bool button2PrevState;
-    unsigned long lastDebounceTime1;
-    unsigned long lastDebounceTime2;
-    const unsigned long debounceDelay = 50;
-
 public:
-    ButtonHandler();
-    void begin(int pin1, int pin2 = -1);
+    ButtonHandler(int pin);
+    void begin();
     void update();
-    bool isButton1Pressed();
-    bool isButton2Pressed();
-    bool wasButton1Clicked();
-    bool wasButton2Clicked();
-    int getButtonState(); // Get combined state
+    bool isPressed();
+    bool wasClicked();
+    bool wasReleased();
+    unsigned long getPressedTime();
+    
+private:
+    int _buttonPin;
+    bool _currentState;
+    bool _lastState;
+    bool _clicked;
+    bool _released;
+    unsigned long _lastDebounceTime;
+    unsigned long _pressedStartTime;
+    const unsigned long _debounceDelay = 50;
+    
+    bool _readButton();
 };
-
-extern ButtonHandler buttonHandler;
 
 #endif // BUTTON_HANDLER_H

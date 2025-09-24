@@ -1,52 +1,42 @@
 #include <Arduino.h>
 #include "serial_handler.h"
 
-// Remove FreeRTOS components for now to simplify
-static String rxBuffer = "";
-static const int RX_BUFFER_SIZE = 64;
-
-void serialSetup(void) {
-    // rxBuffer.reserve(RX_BUFFER_SIZE);
-    Serial.println("Serial handler ready");
+SerialHandler::SerialHandler(unsigned long baudRate) : _baudRate(baudRate) {
+    _message = "";
+}
+void SerialHandler::begin() {
+    Serial.begin(_baudRate);
 }
 
-void serialLoop(void) {
-    // Empty for now - handled in main loop
+void SerialHandler::log(const String &message) {
+    Serial.println(message);
 }
 
-bool getSerialCommand(SerialCommand &cmd) {
-    if (Serial.available() > 0) {
+String SerialHandler::readLine() {
+    String line = "";
+    while (Serial.available()) {
         char c = Serial.read();
-        if (c == '\n' || c == '\r') {
-            if (rxBuffer.length() > 0) {
-                int commaIndex = rxBuffer.indexOf(',');
-                
-                if (commaIndex != -1) {
-                    String velStr = rxBuffer.substring(0, commaIndex);
-                    String angleStr = rxBuffer.substring(commaIndex + 1);
-                    
-                    cmd.velocity = velStr.toFloat();
-                    cmd.steering_angle = angleStr.toFloat();
-                    
-                    Serial.printf("Parsed command: %.2f, %.1f\n", cmd.velocity, cmd.steering_angle);
-                    rxBuffer = "";
-                    return true;
-                }
-                rxBuffer = "";
-            }
-        } else if (rxBuffer.length() < RX_BUFFER_SIZE - 1) {
-            rxBuffer += c;
+        if (c == '\n') {
+            break;
         }
+        line += c;
     }
-    return false;
+    _message = line;
+    return line;
 }
 
-void sendSerialData(const SerialData &data) {
-    Serial.print(data.encoder_count);
-    Serial.print(",");
-    Serial.println(data.button_state);
+int SerialHandler::getVelocity(String rawString) {
+    if(rawString==""){
+        return 0;
+    }
+    int velocity = rawString.substring(0,rawString.indexOf(",")).toInt();
+    return velocity;
 }
 
-void sendRawData(const String &data) {
-    Serial.println(data);
+int SerialHandler::getAngle(String rawString) {
+    if(rawString==""){
+        return 0;
+    }
+    int angle = rawString.substring(rawString.indexOf(",")+1).toInt();
+    return angle;
 }

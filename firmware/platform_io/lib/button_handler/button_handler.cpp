@@ -1,78 +1,72 @@
 #include "button_handler.h"
-#include "tft_handler.h"
 
-ButtonHandler buttonHandler;
+ButtonHandler::ButtonHandler(int pin) 
+    : _buttonPin(pin), _currentState(false), _lastState(false), 
+      _clicked(false), _released(false), _lastDebounceTime(0), 
+      _pressedStartTime(0) {}
 
-ButtonHandler::ButtonHandler() 
-    : button1Pin(-1), button2Pin(-1), 
-      button1State(false), button2State(false),
-      button1PrevState(false), button2PrevState(false),
-      lastDebounceTime1(0), lastDebounceTime2(0) {
-}
-
-void ButtonHandler::begin(int pin1, int pin2) {
-    button1Pin = pin1;
-    button2Pin = pin2;
-    
-    pinMode(button1Pin, INPUT_PULLUP);
-    if (button2Pin != -1) {
-        pinMode(button2Pin, INPUT_PULLUP);
-    }
+void ButtonHandler::begin() {
+    pinMode(_buttonPin, INPUT_PULLUP);
+    _currentState = _readButton();
+    _lastState = _currentState;
 }
 
 void ButtonHandler::update() {
-    unsigned long currentTime = millis();
+    bool reading = _readButton();
     
-    // Read button 1 with debouncing
-    bool reading1 = digitalRead(button1Pin) == LOW;
-    if (reading1 != button1PrevState) {
-        lastDebounceTime1 = currentTime;
+    // Reset the debouncing timer if the button state changed
+    if (reading != _lastState) {
+        _lastDebounceTime = millis();
     }
     
-    if ((currentTime - lastDebounceTime1) > debounceDelay) {
-        if (reading1 != button1State) {
-            button1State = reading1;
-        }
-    }
-    button1PrevState = reading1;
-    
-    // Read button 2 with debouncing (if configured)
-    if (button2Pin != -1) {
-        bool reading2 = digitalRead(button2Pin) == LOW;
-        if (reading2 != button2PrevState) {
-            lastDebounceTime2 = currentTime;
-        }
-        
-        if ((currentTime - lastDebounceTime2) > debounceDelay) {
-            if (reading2 != button2State) {
-                button2State = reading2;
+    // If enough time has passed since the last state change
+    if ((millis() - _lastDebounceTime) > _debounceDelay) {
+        // If the button state has actually changed
+        if (reading != _currentState) {
+            _currentState = reading;
+            
+            // Button was just pressed (transition from HIGH to LOW with pullup)
+            if (!_currentState && _lastState) {
+                _clicked = true;
+                _pressedStartTime = millis();
+            }
+            // Button was just released (transition from LOW to HIGH with pullup)
+            else if (_currentState && !_lastState) {
+                _released = true;
             }
         }
-        button2PrevState = reading2;
     }
+    
+    _lastState = reading;
 }
 
-bool ButtonHandler::isButton1Pressed() {
-    return button1State;
+bool ButtonHandler::isPressed() {
+    return !_currentState; // Inverted because of INPUT_PULLUP
 }
 
-bool ButtonHandler::isButton2Pressed() {
-    return button2State;
+bool ButtonHandler::wasClicked() {
+    if (_clicked) {
+        _clicked = false; // Reset the flag after reading
+        return true;
+    }
+    return false;
 }
 
-bool ButtonHandler::wasButton1Clicked() {
-    bool clicked = button1State && !button1PrevState;
-    return clicked;
+bool ButtonHandler::wasReleased() {
+    if (_released) {
+        _released = false; // Reset the flag after reading
+        return true;
+    }
+    return false;
 }
 
-bool ButtonHandler::wasButton2Clicked() {
-    bool clicked = button2State && !button2PrevState;
-    return clicked;
+unsigned long ButtonHandler::getPressedTime() {
+    if (isPressed() && _pressedStartTime > 0) {
+        return millis() - _pressedStartTime;
+    }
+    return 0;
 }
 
-int ButtonHandler::getButtonState() {
-    int state = 0;
-    if (button1State) state |= 0x01;
-    if (button2State) state |= 0x02;
-    return state;
+bool ButtonHandler::_readButton() {
+    return digitalRead(_buttonPin);
 }
